@@ -1,0 +1,15 @@
+node_modules
+.next
+.env.local
+.env.*.local
+.prisma
+*.log
+.DS_Store
+dist
+build
+coverage
+.nyc_output
+.vscode
+.idea
+*.tsbuildinfo
+next-env.d.ts

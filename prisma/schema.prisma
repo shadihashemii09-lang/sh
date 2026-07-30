@@ -1,0 +1,466 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String             @id @default(cuid())
+  email              String             @unique
+  name               String?
+  password           String?
+  phone              String?
+  avatar             String?
+  role               Role               @default(CUSTOMER)
+  emailVerified      DateTime?
+  image              String?
+  bio                String?
+  locale             String             @default("fa")
+  theme              String             @default("system")
+  accounts           Account[]
+  sessions           Session[]
+  verificationTokens VerificationToken[]
+  bookings           Booking[]
+  reviews            Review[]
+  notifications      Notification[]
+  favorites          Favorite[]
+  invoices           Invoice[]
+  payments           Payment[]
+  auditLogs          AuditLog[]          @relation("UserAuditLogs")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  description String?
+  permissions Permission[]
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  module      String?
+  roleIds     String[]
+  roles       Role[]
+  createdAt   DateTime @default(now())
+
+  @@map("permissions")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  icon        String?
+  color       String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  businesses  Business[]
+  services    Service[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Business {
+  id             String      @id @default(cuid())
+  ownerId        String
+  owner          User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String      @unique
+  description    String?
+  categoryId     String?
+  category       Category?   @relation(fields: [categoryId], references: [id])
+  logo           String?
+  banner         String?
+  province       String?
+  city           String?
+  address        String?
+  phone          String?
+  email          String?
+  instagram      String?
+  telegram       String?
+  website        String?
+  lat            Float?
+  lng            Float?
+  googleMapsEmbed String?
+  workingHours   Json        @default("[]")
+  schedule       Json        @default("[]")
+  bookingSettings Json       @default("{}")
+  subscriptionId String?
+  planId         String?
+  isActive       Boolean     @default(false)
+  isVerified     Boolean     @default(false)
+  settings       Json        @default("{}")
+  employees      Employee[]
+  services       Service[]
+  bookings       Booking[]
+  galleries      Gallery[]
+  reviews        Review[]
+  notifications  Notification[]
+  subscriptions  Subscription[]
+  payments       Payment[]
+  auditLogs      AuditLog[]   @relation("BusinessAuditLogs")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([ownerId])
+  @@map("businesses")
+}
+
+model Employee {
+  id           String  @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  name         String
+  phone        String?
+  email        String?
+  role         String   @default("employee")
+  photo        String?
+  bio          String?
+  workingDays  Json     @default("[]")
+  workingHours Json     @default("[]")
+  vacation     Json     @default("[]")
+  services     String[]
+  commission   Float   @default(0)
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([businessId])
+  @@map("employees")
+}
+
+model Service {
+  id          String  @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  name        String
+  slug        String
+  description String?
+  duration    Int       @default(30)
+  price       Float     @default(0)
+  color       String?
+  image       String?
+  employeeIds String[] @default([])
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([categoryId])
+  @@map("services")
+}
+
+model Customer {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone       String?
+  city        String?
+  province    String?
+  address     String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@map("customers")
+}
+
+model Schedule {
+  id          String  @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employeeId  String?
+  date        DateTime
+  slots       Json    @default("[]")
+  type        String  @default("manual")
+  recurrence  Json?
+  createdAt   DateTime @default(now())
+
+  @@index([businessId, date])
+  @@map("schedules")
+}
+
+model WorkingHour {
+  id          String  @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int
+  openTime    String
+  closeTime   String
+  breakStart  String?
+  breakEnd    String?
+  maxBooking  Int     @default(10)
+  bufferTime  Int     @default(10)
+  createdAt   DateTime @default(now())
+
+  @@index([businessId])
+  @@map("working_hours")
+}
+
+model Holiday {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  date        DateTime
+  type        String   @default("public")
+  createdAt   DateTime @default(now())
+
+  @@index([businessId, date])
+  @@map("holidays")
+}
+
+model Booking {
+  id               String   @id @default(cuid())
+  businessId       String
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId       String?
+  customer         User?    @relation(fields: [customerId], references: [id])
+  employeeId       String?
+  serviceId        String
+  scheduleSlot     Json
+  date             DateTime
+  startTime        String
+  endTime          String
+  status           BookingStatus @default(PENDING)
+  notes            String?
+  paymentId        String?
+  payment          Payment?    @relation(fields: [paymentId], references: [id])
+  invoiceId        String?
+  invoice          Invoice?    @relation(fields: [invoiceId], references: [id])
+  cancellationReason String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([businessId, date])
+  @@index([businessId, status])
+  @@index([customerId])
+  @@index([employeeId])
+  @@map("bookings")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  RESCHEDULED
+}
+
+model Subscription {
+  id          String  @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  planId      String
+  plan        Plan    @relation(fields: [planId], references: [id])
+  status      String  @default("active")
+  startedAt   DateTime @default(now())
+  expiresAt   DateTime?
+  renewalAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([businessId])
+  @@map("subscriptions")
+}
+
+model Plan {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  price       Float   @default(0)
+  interval    String  @default("monthly")
+  features    Json    @default("[]")
+  limits      Json    @default("{}")
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("plans")
+}
+
+model Payment {
+  id              String     @id @default(cuid())
+  bookingId       String?
+  booking         Booking?   @relation(fields: [bookingId], references: [id])
+  businessId      String
+  amount          Float
+  currency        String     @default("IRR")
+  provider        String?
+  providerRef     String?
+  status          String     @default("pending")
+  transactionId   String?
+  metadata        Json?      @default("{}")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([businessId])
+  @@index([bookingId])
+  @@map("payments")
+}
+
+model Invoice {
+  id          String  @id @default(cuid())
+  businessId  String
+  bookingId   String?
+  booking     Booking? @relation(fields: [bookingId], references: [id])
+  customerId  String?
+  number      String  @unique
+  items       Json    @default("[]")
+  subtotal    Float   @default(0)
+  tax         Float   @default(0)
+  discount    Float   @default(0)
+  total       Float   @default(0)
+  currency    String  @default("IRR")
+  status      String  @default("draft")
+  dueDate     DateTime?
+  paidAt      DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([number])
+  @@map("invoices")
+}
+
+model Review {
+  id          String  @id @default(cuid())
+  businessId  String
+  customerId  String?
+  bookingId   String?
+  rating      Int     @default(5)
+  comment     String?
+  status      String  @default("pending")
+  verified    Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([businessId, rating])
+  @@map("reviews")
+}
+
+model Gallery {
+  id          String  @id @default(cuid())
+  businessId  String
+  url         String
+  type        String  @default("image")
+  caption     String?
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([businessId])
+  @@map("gallery")
+}
+
+model Notification {
+  id          String  @id @default(cuid())
+  userId      String
+  title       String
+  body        String?
+  type        String  @default("info")
+  url         String?
+  read        Boolean @default(false)
+  data        Json?   @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String  @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  userId    String?
+  businessId String?
+  metadata  Json?   @default("{}")
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+model Settings {
+  id        String  @id @default(cuid())
+  key       String  @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
